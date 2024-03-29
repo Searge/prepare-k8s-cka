@@ -109,3 +109,295 @@ NAME             STATUS   ROLES                  AGE   VERSION
 mk8s-master-0    Ready    control-plane,master   10d   v1.22.2
 mk8s-node-0      Ready    <none>                 10d   v1.22.1
 ```
+
+### Question 4
+
+**Context:**
+
+No configuration context change is required.
+Ensure, however, that you are have returned to the base node before proceeding.
+
+**Tasks:**
+
+First, create a snapshot of the existing etcd instance running at <https://127.0.0.1:2379>,
+saving the snapshot to /var/lib/backup/etcd-snapshot.db.
+
+The following TLS certificates/key are supplied for connecting to the server with etcdctl:
+
+- CA certificate: /opt/KUIN00601/ca.crt
+- Client certificate: /opt/KUIN00601/etcd-client.crt
+- Client key: /opt/KUIN00601/etcd-client.key
+
+Creating a snapshot of the given instance is expected to complete in seconds.
+If the operation seems to hang , somthing's likely wrong with your command.
+Use `ctrl`+`c` to cancel the operation and try again.
+
+Next, restore an existing, previous snapshot located at /var/lib/backup/etcd-snapshot-previous.db.
+
+**Task solution:**
+
+```bash
+export ETCDCTL_API=3
+etcdctl --endpoints=https://127.0.0.1:2379 \
+  --cacert=/opt/KUIN00601/ca.crt \
+  --cert=/opt/KUIN00601/etcd-client.crt \
+  --key=/opt/KUIN00601/etcd-client.key \
+  snapshot save /var/lib/backup/etcd-snapshot.db
+
+etcdctl --endpoints=https://127.0.0.1:2379 \
+  --cacert=/opt/KUIN00601/ca.crt \
+  --cert=/opt/KUIN00601/etcd-client.crt \
+  --key=/opt/KUIN00601/etcd-client.key \
+  snapshot status /var/lib/backup/etcd-snapshot-previous.db
+
+sudo systemctl stop etcd.service
+
+etcdctl --endpoints=https://127.0.0.1:2379 \
+  --cacert=/opt/KUIN00601/ca.crt \
+  --cert=/opt/KUIN00601/etcd-client.crt \
+  --key=/opt/KUIN00601/etcd-client.key \
+  snapshot restore /var/lib/backup/etcd-snapshot-previous.db
+
+sudo systemctl start etcd.service
+```
+
+### Question 5
+
+**Context:**
+
+```bash
+k config use-context hk8s
+```
+
+**Tasks:**
+
+- Create a new NetworkPolicy named `allow-port-from-namespace` in the existing namespace `fubar`.
+- Ensure that the new NetworkPolicy allows Pods in namespace internal to connect to port 9000 of Pods in namespace `fubar`.
+- Further ensure that the new NetworkPolicy:
+  - does not allow access to Pods, which don't listen on port 9000
+  - does not allow access from Pods, which are not in namespace internal
+
+**Task solution:**
+
+```bash
+# Label the namespace for the NetworkPolicy
+k label ns fubar app=fubar
+
+# Create the NetworkPolicy
+cat <<EOF | k apply -f -
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-port-from-namespace
+  namespace: fubar
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          app: fubar
+    ports:
+    - protocol: TCP
+      port: 9000
+
+```
+
+- [The NetworkPolicy resource](https://kubernetes.io/docs/concepts/services-networking/network-policies/#networkpolicy-resource)
+
+### Question 6
+
+**Context:**
+
+```bash
+k config use-context k8s
+```
+
+**Tasks:**
+
+- Reconfigure the existing deployment front-end and add a port specification named http exposing port 80/tcp of the existing container nginx.
+- Create a new service named front-end-svc exposing the container port http.
+- Configure the new service to also expose the individual Pods via a NodePort on the nodes on which they are scheduled.
+
+**Task solution:**
+
+```bash
+k edit deploy front-end
+```
+
+```yaml
+spec:
+  template:
+    spec:
+      containers:
+      - name: nginx
+        ports:
+        - containerPort: 80
+          name: http
+```
+
+```bash
+k expose deploy front-end --port=80 --target-port=80 --name=front-end-svc --type=NodePort
+```
+
+### Question 7
+
+**Context:**
+
+```bash
+k config use-context k8s
+```
+
+**Tasks:**
+
+- Scale the deployment presentation to 3 pods.
+
+**Task solution:**
+
+```bash
+k scale deploy presentation --replicas=3
+```
+
+### Question 8
+
+**Context:**
+
+```bash
+k config use-context k8s
+```
+
+**Tasks:**
+
+- Schedule a pod as follows:
+  - Name: `nginx-kusc00401`
+  - Image: `nginx`
+  - Node selector: `disk=ssd`
+
+**Task solution:**
+
+```bash
+k run nginx-kusc00401 --image=nginx \
+  --overrides='{"spec": {"nodeSelector": {"disk": "ssd"}}}' \
+  --dry-run=client -o yaml > nginx-kusc00401.yaml
+
+k apply -f nginx-kusc00401.yaml
+
+```
+
+### Question 9
+
+**Context:**
+
+```bash
+k config use-context k8s
+```
+
+**Tasks:**
+
+- Check to see how many nodes are ready (not including nodes tainted NoSchedule)
+  and write the number to /opt/KUSC00402/kusc00402.txt.
+
+**Task solution:**
+
+```bash
+k get no \
+  -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{end}' \
+  | grep 'node' | grep True | wc -l > /opt/KUSC00402/kusc00402.txt
+```
+
+### Question 10
+
+**Context:**
+
+```bash
+k config use-context k8s
+```
+
+**Tasks:**
+
+Schedule a Pod as follows:
+
+- Name: `kucc8`
+- App Containers: 2
+- Container Name/Images:
+  - `nginx`
+  - `consul`
+
+**Task solution:**
+
+```bash
+k run kucc8 --image=nginx --image=consul --dry-run=client -o yaml > kucc8.yaml
+```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kucc8
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+  - name: consul
+    image: consul
+```
+
+```bash
+k apply -f kucc8.yaml
+```
+
+### Question 11
+
+**Context:**
+
+```bash
+k config use-context hk8s
+```
+
+**Tasks:**
+
+- Create a persistent volume with name `app-data`, of capacity 2Gi and access mode ReadOnlyMany.
+- The type of volume is hostPath and its location is `/srv/app-data`.
+
+**Task solution:**
+
+```bash
+cat <<EOF | k apply -f -
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: app-data
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadOnlyMany
+  hostPath:
+    path: /srv/app-data
+EOF
+```
+
+[Reserving a PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reserving-a-persistentvolume)
+
+### Question 12
+
+**Context:**
+
+```bash
+k config use-context k8s
+```
+
+**Tasks:**
+
+Monitor the logs of pod foo and:
+
+- Extract log lines corresponding to error `file-not-found`
+- Write them to `/opt/KUTR00101/foo`
+
+**Task solution:**
+
+```bash
+k logs foo | grep 'file-not-found' > /opt/KUTR00101/foo
+```
