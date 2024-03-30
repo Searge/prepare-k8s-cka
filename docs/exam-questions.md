@@ -1,5 +1,23 @@
 # Exam Questions on Kubernetes CKA Exam
 
+## Tips and Tricks
+
+### Usefull aliases
+
+```bash
+alias k='kubectl'
+alias kg='kubectl get'
+alias kd='kubectl describe'
+alias kcuc='kubectl config use-context'
+```
+
+### Usefull variables
+
+```bash
+export KUBE_EDITOR="vim"
+export do="--dry-run=client -o yaml"
+```
+
 ## Questions
 
 ### Question 1
@@ -400,4 +418,243 @@ Monitor the logs of pod foo and:
 
 ```bash
 k logs foo | grep 'file-not-found' > /opt/KUTR00101/foo
+```
+
+### Question 13
+
+**Context:**
+
+```bash
+k config use-context k8s
+```
+
+An existing Pod needs to be integrated into the Kubernetes built-in logging architecture (e.g. kubectl logs).
+Adding a streaming sidecar container is a good and common way to accomplish this requirement.
+
+**Tasks:**
+
+Add a sidecar container named sidecar, using the busybox image, to the existing Pod big-corp-app.
+The new sidecar container has to run the following command:
+
+```bash
+/bin/sh -c 'tail -n+1 -f /var/log/big-corp-app.log'
+```
+
+Use a VolumeMount, mounted at /var/log, to make the log file `big-corp-app.log` available to the sidecar container.
+
+> **Warning:** Don't modify the specification of the existing container other than adding the reqired volume mount.
+
+**Task solution:**
+
+```bash
+k edit pod big-corp-app
+```
+
+```yaml
+spec:
+  containers:
+  - name: big-corp-app
+    volumeMounts:
+    - name: log
+      mountPath: /var/log
+  - name: sidecar
+    image: busybox
+    command: ["/bin/sh", "-c", "tail -n+1 -f /var/log/big-corp-app.log"]
+    volumeMounts:
+    - name: log
+      mountPath: /var/log
+  volumes:
+  - name: log
+    emptyDir: {}
+```
+
+### Question 14
+
+**Context:**
+
+```bash
+k config use-context k8s
+```
+
+**Tasks:**
+
+From the pod label `name=overloaded-cpu`, find pods running high CPU workloads and write the name of the pod
+consuming most CPU to the file `/opt/KUTR00401/KUTR00401.txt` (which already exists).
+
+**Task solution:**
+
+```bash
+k top pod -l name=overloaded-cpu --sort-by=cpu | head -n 2 | tail -n 1 \
+  | awk '{print $1}' > /opt/KUTR00401/KUTR00401.txt
+```
+
+### Question 15
+
+**Context:**
+
+```bash
+k config use-context wk8s
+```
+
+**Tasks:**
+
+A Kubernetes worker node, named `wk8s-node-0` is in state `NotReady`.
+
+Investigate why this is the case, and perform any appropriate steps to bring the node to a `Ready` state,
+ensuring that any changes are made permanent.
+
+> **Note:** You can ssh to the filed node using:
+> `ssh wk8s-node-0`
+>
+> You can assume elevated privileges with the following command:
+> `sudo -i`
+
+**Task solution:**
+
+```bash
+k get no
+NAME             STATUS   ROLES                  AGE   VERSION
+wk8s-master-0    Ready    control-plane,master   10d   v1.23.1
+wk8s-node-0      NotReady <none>                 10d   v1.23.1
+wk8s-node-1      Ready    <none>                 10d   v1.23.1
+
+k describe no wk8s-node-0
+...
+Conditions:
+  Type                 Status  LastHeartbeatTime                 LastTransitionTime                Reason                       Message
+  ----                 ------  -----------------                 ------------------                ------                       -------
+  NetworkUnavailable   False   Tue, 01 Jan 0001 00:00:00 +0000   Tue, 01 Jan 0001 00:00:00 +0000   FlannelIsUp                  Flannel is running on this node
+  MemoryPressure       False   Tue, 01 Jan 0001 00:00:00 +0000   Tue, 01 Jan 0001 00:00:00 +0000   KubeletHasSufficientMemory   Kubelet stopped posting node status.
+  DiskPressure         False   Tue, 01 Jan 0001 00:00:00 +0000   Tue, 01 Jan 0001 00:00:00 +0000   KubeletHasNoDiskPressure     Kubelet stopped posting node status.
+  PIDPressure          False   Tue, 01 Jan 0001 00:00:00 +0000   Tue, 01 Jan 0001 00:00:00 +0000   KubeletHasSufficientPID      Kubelet stopped posting node status.
+  Ready                False   Tue, 01 Jan 0001 00:00:00 +0000   Tue, 01 Jan 0001 00:00:00 +0000   KubeletNotReady              Kubelet stopped posting node status.
+...
+
+ssh wk8s-node-0
+sudo -i
+systemctl restart kubelet # Ensure it is enabled too. So change remains active after reboot
+systemctl enable kubelet
+exit
+
+k get no
+NAME             STATUS   ROLES                  AGE   VERSION
+wk8s-master-0    Ready    control-plane,master   10d   v1.23.1
+wk8s-node-0      Ready    <none>                 10d   v1.23.1
+wk8s-node-1      Ready    <none>                 10d   v1.23.1
+```
+
+### Question 16
+
+**Context:**
+
+```bash
+k config use-context ok8s
+```
+
+**Tasks:**
+
+- Create a new `PersistentVolumeClaim`:
+  - Name: `pv-volume`
+  - Class: `csi-hostpath-sc`
+  - Capacity: `10Mi`
+- Create a new Pod which mounts the `PersistentVolumeClaim` as a volume:
+  - Name: `web-server`
+  - Image: `nginx`
+  - Mount path: `/usr/share/nginx/html`
+- Configure the new Pod to have `ReadWriteOnce` access on the volume.
+- Finally, using kubectl edit or kubectl patch expand the `PersistentVolumeClaim` to a capacity of 70Mi and record that change.
+
+**Task solution:**
+
+```bash
+cat <<EOF | k apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pv-volume
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Mi
+  storageClassName: csi-hostpath-sc
+EOF
+```
+
+```bash
+cat <<EOF | k apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-server
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    volumeMounts:
+    - name: pv-volume
+      mountPath: /usr/share/nginx/html
+  volumes:
+  - name: pv-volume
+    persistentVolumeClaim:
+      claimName: pv-volume
+EOF
+```
+
+```bash
+k edit pvc pv-volume
+```
+
+```yaml
+spec:
+  resources:
+    requests:
+      storage: 70Mi
+```
+
+### Question 17
+
+**Context:**
+
+```bash
+k config use-context ok8s
+```
+
+**Tasks:**
+
+- Create a new nginx Ingress resource as follows:
+  - Name: `pong`
+  - Namespace: `ing-internal`
+  - Exposing service hello on path `/hello` using service port `5678`
+
+> **Note:** The availability of service `hello` can be checked using the following command,
+> which should return `hello``
+>
+> ```bash
+> curl -kL <INTERNAL_IP>/hello
+> ```
+>
+
+**Task solution:**
+
+```bash
+cat <<EOF | k apply -f -
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pong
+  namespace: ing-internal
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /hello
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: hello
+            port:
+              number: 5678
+EOF
 ```
