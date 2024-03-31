@@ -35,7 +35,7 @@ You have been asked to create a new ClusterRole for a deployment pipeline and bi
 - Create a new ServiceAccount named cicd-token in the existing namespace app-team1.
 - Bind the new ClusterRole deployment-clusterrole to the new ServiceAccount cicd-token, limited to the namespace app-team1.
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 k create clusterrole deployment-clusterrole --verb=create \
@@ -45,6 +45,8 @@ k create clusterrolebinding cicd-token-binding \
   --clusterrole=deployment-clusterrole \
   --serviceaccount=app-team1:cicd-token
 ```
+
+</details>
 
 ### Question 2
 
@@ -58,13 +60,15 @@ k config use-context ek8s
 
 Set the node named ek8s-node-0 as unavailable and reschedule all the pods running on it.
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 k get no
 k cordon ek8s-node-0
 k drain ek8s-node-0 --ignore-daemonsets --delete-emptydir-data
 ```
+
+</details>
 
 ### Question 3
 
@@ -97,7 +101,7 @@ You are also expected to upgrade the kubelet and kubectl binaries on the master 
 > **Warning:** Do not upgrade the worker nodes, etcd, the container manager, the CNI plugin,
 > the DNS service, or any other components.
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 k get no
@@ -128,6 +132,8 @@ mk8s-master-0    Ready    control-plane,master   10d   v1.22.2
 mk8s-node-0      Ready    <none>                 10d   v1.22.1
 ```
 
+</details>
+
 ### Question 4
 
 **Context:**
@@ -152,7 +158,7 @@ Use `ctrl`+`c` to cancel the operation and try again.
 
 Next, restore an existing, previous snapshot located at /var/lib/backup/etcd-snapshot-previous.db.
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 export ETCDCTL_API=3
@@ -179,6 +185,8 @@ etcdctl --endpoints=https://127.0.0.1:2379 \
 sudo systemctl start etcd.service
 ```
 
+</details>
+
 ### Question 5
 
 **Context:**
@@ -195,7 +203,7 @@ k config use-context hk8s
   - does not allow access to Pods, which don't listen on port 9000
   - does not allow access from Pods, which are not in namespace internal
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 # Label the namespace for the NetworkPolicy
@@ -225,6 +233,8 @@ spec:
 
 - [The NetworkPolicy resource](https://kubernetes.io/docs/concepts/services-networking/network-policies/#networkpolicy-resource)
 
+</details>
+
 ### Question 6
 
 **Context:**
@@ -239,7 +249,7 @@ k config use-context k8s
 - Create a new service named front-end-svc exposing the container port http.
 - Configure the new service to also expose the individual Pods via a NodePort on the nodes on which they are scheduled.
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 k edit deploy front-end
@@ -260,6 +270,8 @@ spec:
 k expose deploy front-end --port=80 --target-port=80 --name=front-end-svc --type=NodePort
 ```
 
+</details>
+
 ### Question 7
 
 **Context:**
@@ -272,11 +284,13 @@ k config use-context k8s
 
 - Scale the deployment presentation to 3 pods.
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 k scale deploy presentation --replicas=3
 ```
+
+</details>
 
 ### Question 8
 
@@ -293,7 +307,7 @@ k config use-context k8s
   - Image: `nginx`
   - Node selector: `disk=ssd`
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 k run nginx-kusc00401 --image=nginx \
@@ -303,6 +317,8 @@ k run nginx-kusc00401 --image=nginx \
 k apply -f nginx-kusc00401.yaml
 
 ```
+
+</details>
 
 ### Question 9
 
@@ -317,13 +333,15 @@ k config use-context k8s
 - Check to see how many nodes are ready (not including nodes tainted NoSchedule)
   and write the number to /opt/KUSC00402/kusc00402.txt.
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 k get no \
   -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{end}' \
   | grep 'node' | grep True | wc -l > /opt/KUSC00402/kusc00402.txt
 ```
+
+</details>
 
 ### Question 10
 
@@ -343,7 +361,7 @@ Schedule a Pod as follows:
   - `nginx`
   - `consul`
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 k run kucc8 --image=nginx --image=consul --dry-run=client -o yaml > kucc8.yaml
@@ -366,6 +384,8 @@ spec:
 k apply -f kucc8.yaml
 ```
 
+</details>
+
 ### Question 11
 
 **Context:**
@@ -379,7 +399,7 @@ k config use-context hk8s
 - Create a persistent volume with name `app-data`, of capacity 2Gi and access mode ReadOnlyMany.
 - The type of volume is hostPath and its location is `/srv/app-data`.
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 cat <<EOF | k apply -f -
@@ -399,6 +419,8 @@ EOF
 
 [Reserving a PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reserving-a-persistentvolume)
 
+</details>
+
 ### Question 12
 
 **Context:**
@@ -414,11 +436,13 @@ Monitor the logs of pod foo and:
 - Extract log lines corresponding to error `file-not-found`
 - Write them to `/opt/KUTR00101/foo`
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 k logs foo | grep 'file-not-found' > /opt/KUTR00101/foo
 ```
+
+</details>
 
 ### Question 13
 
@@ -444,7 +468,7 @@ Use a VolumeMount, mounted at /var/log, to make the log file `big-corp-app.log` 
 
 > **Warning:** Don't modify the specification of the existing container other than adding the reqired volume mount.
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 k edit pod big-corp-app
@@ -468,6 +492,8 @@ spec:
     emptyDir: {}
 ```
 
+</details>
+
 ### Question 14
 
 **Context:**
@@ -481,12 +507,14 @@ k config use-context k8s
 From the pod label `name=overloaded-cpu`, find pods running high CPU workloads and write the name of the pod
 consuming most CPU to the file `/opt/KUTR00401/KUTR00401.txt` (which already exists).
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 k top pod -l name=overloaded-cpu --sort-by=cpu | head -n 2 | tail -n 1 \
   | awk '{print $1}' > /opt/KUTR00401/KUTR00401.txt
 ```
+
+</details>
 
 ### Question 15
 
@@ -509,7 +537,7 @@ ensuring that any changes are made permanent.
 > You can assume elevated privileges with the following command:
 > `sudo -i`
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 k get no
@@ -543,6 +571,8 @@ wk8s-node-0      Ready    <none>                 10d   v1.23.1
 wk8s-node-1      Ready    <none>                 10d   v1.23.1
 ```
 
+</details>
+
 ### Question 16
 
 **Context:**
@@ -564,7 +594,7 @@ k config use-context ok8s
 - Configure the new Pod to have `ReadWriteOnce` access on the volume.
 - Finally, using kubectl edit or kubectl patch expand the `PersistentVolumeClaim` to a capacity of 70Mi and record that change.
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution: </summary>
 
 ```bash
 cat <<EOF | k apply -f -
@@ -613,6 +643,8 @@ spec:
       storage: 70Mi
 ```
 
+</details>
+
 ### Question 17
 
 **Context:**
@@ -636,7 +668,7 @@ k config use-context ok8s
 > ```
 >
 
-**Task solution:**
+<details><summary style='font-weight: bold;'>Task solution:  </summary>
 
 ```bash
 cat <<EOF | k apply -f -
@@ -658,3 +690,5 @@ spec:
               number: 5678
 EOF
 ```
+
+</details>
