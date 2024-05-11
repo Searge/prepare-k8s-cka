@@ -1,8 +1,11 @@
-# Preparation For Kubernetes CKA Exam
+# Preparation For Kubernetes CKA/CKAD Exam
 
 ## Exam Questions
 
-- [Exam Questions](docs/exam-questions.md)
+- [Exam Tips](docs/exam-tips.md)
+  - [Required fields](required_fields_in_manifests.md)
+- [Exam Questions CKA](docs/exam-questions_cka.md)
+- [Exam Questions CKAD](docs/exam-questions_ckad.md)
 
 ## Resources
 

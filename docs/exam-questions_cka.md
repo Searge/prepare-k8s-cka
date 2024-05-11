@@ -1,51 +1,5 @@
 # Exam Questions on Kubernetes CKA Exam
 
-## Tips and Tricks
-
-### Usefull aliases
-
-```bash
-alias k='kubectl'
-alias kg='kubectl get'
-alias kd='kubectl describe'
-alias kcuc='kubectl config use-context'
-```
-
-### Usefull variables
-
-```bash
-export do="--dry-run=client -o yaml"
-export now="--force --grace-period 0"
-```
-
-### Autocompletion
-
-```bash
-# add autocomplete permanently to your bash shell.
-echo ". <(kubectl completion bash)" >> ~/.bashrc
-
-# source bashrc
-. ~/.bashrc
-```
-
-### Cheat Sheet
-
-```bash
-# Get the documentation of the resource and its fields
-kubectl explain pods
-
-# Get all the fields in the resource
-kubectl explain pods --recursive
-
-# Get the documentation of the field in the resource
-kubectl explain pods.spec.containers
-
-# Get the documentation of the field in the resource
-kubectl explain pods.spec.containers.image
-```
-
-> Reas about [required fields](required_fields_in_manifests.md) in the resource and their values.
-
 ## Questions
 
 ### Question 1
@@ -73,6 +27,8 @@ k create clusterrolebinding cicd-token-binding \
   --clusterrole=deployment-clusterrole \
   --serviceaccount=app-team1:cicd-token
 ```
+
+- [Snapshot using etcdctl options](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/#snapshot-using-etcdctl-options)
 
 </details>
 
@@ -108,8 +64,8 @@ k config use-context mk8s
 
 **Tasks:**
 
-Given an existing Kubernetes cluster running version 1.22.1,
-upgrade all of the Kubernetes control plane and node components on the master node only to version 1.22.2.
+Given an existing Kubernetes cluster running version 1.29.1,
+upgrade all of the Kubernetes control plane and node components on the master node only to version 1.29.2.
 Be sure to drain the master node before upgrading it and uncordon it after the upgrade.
 
 You can ssh into the master node using the following command:
@@ -137,7 +93,6 @@ NAME             STATUS   ROLES                  AGE   VERSION
 mk8s-master-0    Ready    control-plane,master   10d   v1.22.1
 mk8s-node-0      Ready    <none>                 10d   v1.22.1
 
-k cordon mk8s-master-0
 k drain mk8s-master-0 --ignore-daemonsets
 k get no
 NAME             STATUS                     ROLES                  AGE   VERSION
@@ -145,19 +100,38 @@ mk8s-master-0    Ready,SchedulingDisabled   control-plane,master   10d   v1.22.1
 mk8s-node-0      Ready                      <none>                 10d   v1.22.1
 
 ssh mk8s-master-0
+
 sudo -i
-apt-get update
-apt-get install -y kubelet=1.22.2-00 kubectl=1.22.2-00 kubeadm=1.22.2-00
-kubeadm upgrade node
-kubeadm upgrade apply v1.22.2
-systemctl restart kubelet
+
+apt-get update && sudo apt-cache madison kubeadm
+
+# replace x in 1.29.x-* with the latest patch version
+sudo apt-mark unhold kubeadm && \
+sudo apt-get update && sudo apt-get install -y kubeadm='1.29.2-*' && \
+sudo apt-mark hold kubeadm
+
+kubeadm version
+
+# Verify the upgrade plan:
+sudo kubeadm upgrade plan
+
+sudo kubeadm upgrade apply v1.29.2
+
+# replace x in 1.29.x-* with the latest patch version
+sudo apt-mark unhold kubelet kubectl && \
+sudo apt-get update && sudo apt-get install -y kubelet='1.29.2-*' kubectl='1.29.2-*' && \
+sudo apt-mark hold kubelet kubectl
+
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+
 exit
 
 k uncordon mk8s-master-0
 k get no
 NAME             STATUS   ROLES                  AGE   VERSION
-mk8s-master-0    Ready    control-plane,master   10d   v1.22.2
-mk8s-node-0      Ready    <none>                 10d   v1.22.1
+mk8s-master-0    Ready    control-plane,master   10d   v1.29.2
+mk8s-node-0      Ready    <none>                 10d   v1.29.1
 ```
 
 </details>
@@ -289,14 +263,20 @@ spec:
     spec:
       containers:
       - name: nginx
+        image: nginx:1.14.2
         ports:
         - containerPort: 80
           name: http
 ```
 
 ```bash
-k expose deploy front-end --port=80 --target-port=80 --name=front-end-svc --type=NodePort
+k expose deploy front-end --name=front-end-svc --port=80 --target-port=80 --type=NodePort
+
+# Verify the service
+kubectl get svc front-end-svc
 ```
+
+- [Expose a Service using NodePort](https://kubernetes.io/docs/tutorials/stateless-application/expose-external-ip-address/)
 
 </details>
 
@@ -345,6 +325,8 @@ k run nginx-kusc00401 --image=nginx \
 k apply -f nginx-kusc00401.yaml
 
 ```
+
+- [Assigning Pods to Nodes](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/)
 
 </details>
 
@@ -705,12 +687,14 @@ kind: Ingress
 metadata:
   name: pong
   namespace: ing-internal
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   rules:
   - http:
       paths:
       - path: /hello
-        pathType: ImplementationSpecific
+        pathType: Prefix
         backend:
           service:
             name: hello
@@ -718,5 +702,11 @@ spec:
               number: 5678
 EOF
 ```
+
+```bash
+k get ing -n ing-internal
+```
+
+- [Ingress resource](https://kubernetes.io/docs/concepts/services-networking/ingress/)
 
 </details>
