@@ -26,6 +26,19 @@ echo ". <(kubectl completion bash)" >> ~/.bashrc
 . ~/.bashrc
 ```
 
+## Vim configuration
+
+```vim:~/.vimrc
+" set tab size to 2 spaces and use spaces instead of tabs
+set ts=2   " number of spaces a tab is counted for
+set sw=2   " number of spaces to use for autoindent
+set et     " use spaces instead of tabs
+set ai     " autoindent
+
+" toggle paste mode
+set pastetoggle=<F3>
+```
+
 ## Cheat Sheet
 
 ```bash
